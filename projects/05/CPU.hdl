@@ -39,5 +39,37 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+
+    //Decode
+    Mux16(b=instruction[0..15], a=false, sel=instruction[15], out[0]=j3, out[1]=j2, out[2]=j1, out[3]=writeM, out[4]=d2, out[5]=d1, out[6]=c6, out[7]=c5, out[8]=c4, out[9]=c3, out[10]=c2, out[11]=c1, out[12]=a);
+    
+    //A Load Selector
+    Mux(a=true, b=d1, sel=instruction[15], out=ALoadOut);
+    
+    
+    Mux16(a=instruction, b=aluOut, sel=instruction[15], out=muxToA);
+    //A
+    ARegister(in=muxToA, load=ALoadOut, out[0..14]=addressM, out=aToAlu);
+
+    DRegister(in=aluOut, load=d2, out=dOut);
+    
+    Mux16(b=inM, a=aToAlu, b[15]=false, sel=a, out=muxToAlu);
+
+    ALU(x=dOut, y=muxToAlu, zx=c1, nx=c2, zy=c3, ny=c4, f=c5, no=c6, out=aluOut, zr=zr, ng=ng, out=outM);
+
+
+    //Jump selector
+    Or(a=zr, b=ng, out=zrngOut);
+    Not(in=zrngOut, out=NorOut);
+    
+    And(a=ng, b=j1, out=less);
+    And(a=zr, b=j2, out=equals);
+    And(a=NorOut, b=j3, out=more);
+
+    Or(a=less, b=equals, out=lessOrEquals);
+    Or(a=lessOrEquals, b=more, out=JMP);
+    Not(in=JMP, out=nJMP);
+    //Jump selector end
+
+    PC(in=aToAlu, load=JMP, inc=nJMP, reset=reset, out[0..14]=pc);
 }
